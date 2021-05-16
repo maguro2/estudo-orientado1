@@ -466,8 +466,7 @@ Proof.
   intros a b n. induction a as [| a'].
   - simpl. reflexivity.
   - simpl. destruct  a'.
-    + simpl. rewrite <- IHa. 
-Abort.
+    + simpl. rewrite <- IHa. Admitted.
 
 (*Exercise: 4 stars, advanced (rev_injective)
 Prove that the rev function is injective. There is a hard way and an easy way to do this.*)
@@ -475,6 +474,118 @@ Prove that the rev function is injective. There is a hard way and an easy way to
 Theorem rev_injective : forall (l1 l2 : natlist),
     rev l1 = rev l2 -> l1 = l2.
 Proof.
-  intros l1 l2 H. rewrite <- (rev_involutive l1). rewrite -> H. 
+  intros l1 l2 H. Search rev. rewrite <- (rev_involutive l1). rewrite -> H. 
   rewrite-> (rev_involutive l2). reflexivity. Qed.
 
+Fixpoint nth_bad (l:natlist) (n:nat) : nat :=
+  match l with
+  | nil => 42
+  | a :: l' => match n with
+               | 0 => a
+               | S n' => nth_bad l' n'
+               end
+  end.
+
+Inductive natoption : Type :=
+  | Some (n : nat)
+  | None.
+
+Fixpoint nth_error (l:natlist) (n:nat) : natoption :=
+  match l with
+  | nil => None
+  | a :: l' => match n with
+               | O => Some a
+               | S n' => nth_error l' n'
+               end
+  end.
+Example test_nth_error1 : nth_error [4;5;6;7] 0 = Some 4.
+Proof. reflexivity. Qed.
+Example test_nth_error2 : nth_error [4;5;6;7] 3 = Some 7.
+Proof. reflexivity. Qed.
+Example test_nth_error3 : nth_error [4;5;6;7] 9 = None.
+Proof. reflexivity. Qed.
+
+Fixpoint nth_error' (l:natlist) (n:nat) : natoption :=
+  match l with
+  | nil => None
+  | a :: l' => if n =? O then Some a
+               else nth_error' l' (pred n)
+  end.
+
+Definition option_elim (d : nat) (o : natoption) : nat :=
+  match o with
+  | Some n' => n'
+  | None => d
+  end.
+
+(*Exercise: 2 stars, standard (hd_error)*)
+Definition hd_error (l : natlist) : natoption  :=
+  match l with
+  | nil => None
+  | h :: t => Some h
+  end.
+
+Example test_hd_error1 : hd_error [] = None.
+Proof. reflexivity. Qed.
+Example test_hd_error2 : hd_error [1] = Some 1.
+Proof. reflexivity. Qed.
+Example test_hd_error3 : hd_error [5;6] = Some 5.
+Proof. reflexivity. Qed.
+
+(*Exercise: 1 star, standard, optional (option_elim_hd)*)
+Theorem option_elim_hd : forall (l:natlist) (default:nat),
+  hd default l = option_elim default (hd_error l).
+Proof.
+  intros l default. destruct l as [| n l'].
+  - simpl. reflexivity.
+  - simpl. reflexivity. Qed.
+
+End NatList.
+
+Inductive id : Type :=
+  | Id (n : nat).
+
+Definition eqb_id (x1 x2 : id) :=
+  match x1, x2 with
+  | Id n1, Id n2 => n1 =? n2
+  end.
+
+(*Exercise: 1 star, standard (eqb_id_refl)*)
+Theorem eqb_id_refl : forall x, true = eqb_id x x.
+Proof.
+  intros x. Admitted.
+
+Module PartialMap.
+Export NatList.
+Inductive partial_map : Type :=
+  | empty
+  | record (i : id) (v : nat) (m : partial_map).
+
+Definition update (d : partial_map)
+                  (x : id) (value : nat)
+                  : partial_map :=
+  record x value d.
+
+Fixpoint find (x : id) (d : partial_map) : natoption :=
+  match d with
+  | empty => None
+  | record y v d' => if eqb_id x y
+                     then Some v
+                     else find x d'
+  end.
+
+(*Exercise: 1 star, standard (update_eq)*)
+Theorem update_eq :
+  forall (d : partial_map) (x : id) (v: nat),
+    find x (update d x v) = Some v.
+Proof.
+ intros d x v. destruct d as [| n d'].
+  - simpl. Admitted.
+
+(*Exercise: 1 star, standard (update_neq)*)
+Theorem update_neq :
+  forall (d : partial_map) (x y : id) (o: nat),
+    eqb_id x y = false -> find x (update d y o) = find x d.
+Proof.
+  intros d x y o h. simpl. rewrite h. reflexivity. Qed.
+End PartialMap.
