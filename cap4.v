@@ -230,15 +230,15 @@ and returns a pair of lists. In many functional languages, it is called unzip.
 Fill in the definition of split below. Make sure it passes the given unit test.*)
 
 Fixpoint split {X Y : Type} (l : list (X * Y))
-               : (list X) * (list Y)
-(* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-    (*match l with
-  | nil => ([], [])
-  | (lx, ly) :: l' => (cons lx, cons ly) (split l')
-end.*)
+               : (list X) * (list Y):=
+  match l with
+    | [] => ([],[])
+    | (x,y) :: rest => let (xs, ys) := split rest
+                       in  (x :: xs, y :: ys)
+  end.
 Example test_split:
   split [(1,false);(2,false)] = ([1;2],[false;false]).
-Proof. simpl. Admitted.
+Proof. simpl. reflexivity. Qed.
 
 (******1.1.3  Polymorphic Options******)
 Module OptionPlayground.
@@ -536,15 +536,18 @@ We can define currying as follows:*)
 
 Definition prod_curry {X Y Z : Type}
   (f : X * Y -> Z) (x : X) (y : Y) : Z := f (x, y).
-As an exercise, define its inverse, prod_uncurry. Then prove the theorems below to show that the two are inverses.
+
+(*As an exercise, define its inverse, prod_uncurry. Then prove the theorems 
+below to show that the two are inverses.*)
 
 Definition prod_uncurry {X Y Z : Type}
-  (f : X -> Y -> Z) (p : X × Y) : Z
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-As a (trivial) example of the usefulness of currying, we can use it to shorten one of the examples that we saw above:
+  (f : X -> Y -> Z) (p : X * Y) : Z:=
+  f (fst p) (snd p).
+(*As a (trivial) example of the usefulness of currying, we can use it to shorten 
+one of the examples that we saw above:*)
 
 Example test_map1': map (plus 3) [2;0;2] = [5;3;5].
-
+Proof. reflexivity. Qed.
 (*Thought exercise: before running the following commands, 
 can you calculate the types of prod_curry and prod_uncurry?*)
 
@@ -555,9 +558,93 @@ Theorem uncurry_curry : forall(X Y Z : Type)
                         x y,
   prod_curry (prod_uncurry f) x y = f x y.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X Y Z f x y. reflexivity. Qed.
 Theorem curry_uncurry : forall (X Y Z : Type)
                         (f : (X * Y) -> Z) (p : X * Y),
   prod_uncurry (prod_curry f) p = f p.
 Proof.
-  (* FILL IN HERE *) Admitted.
+    intros X Y Z f p. destruct p. reflexivity. Qed.
+
+(*Exercise: 2 stars, advanced (nth_error_informal)
+Recall the definition of the nth_error function:*)
+   Fixpoint nth_error {X : Type} (l : list X) (n : nat) : option X :=
+     match l with
+     | [] => None
+     | a :: l' => if n =? O then Some a else nth_error l' (pred n)
+     end.
+(*Write an informal proof of the following theorem:
+   forall X l n, length l = n -> @nth_error X l n = None
+(* FILL IN HERE *)
+(* Do not modify the following line: *)
+Definition manual_grade_for_informal_proof : option (nat×string) := None.*)
+
+(*** Church numerals***)
+Module Church.
+Definition cnat := forall X : Type, (X -> X) -> X -> X.
+
+Definition one : cnat :=
+  fun (X : Type) (f : X -> X) (x : X) => f x.
+
+Definition two : cnat :=
+  fun (X : Type) (f : X -> X) (x : X) => f (f x).
+
+Definition zero : cnat :=
+  fun (X : Type) (f : X -> X) (x : X) => x.
+
+Definition three : cnat := @doit3times.
+(*Complete the definitions of the following functions. Make sure that the 
+corresponding unit tests pass by proving them with reflexivity.*)
+(*************************
+(*Exercise: 1 star, advanced (church_succ)
+Successor of a natural number: given a Church numeral n, 
+the successor succ n is a function that iterates its argument once more than n.*)
+Definition succ (n : cnat) : cnat:=
+  fun (X : Type) (f : X -> X) (x : X) => f (n X f x).
+Example succ_1 : succ zero = one.
+Proof. reflexivity. Qed.
+Example succ_2 : succ one = two.
+Proof. simpl. reflexivity. Qed.
+Example succ_3 : succ two = three.
+Proof. reflexivity. Qed.
+
+(*Exercise: 1 star, advanced (church_plus)
+Addition of two natural numbers:*)
+Definition plus (n m : cnat) : cnat:=
+  fun (X : Type) (f : X -> X) (x : X) =>(n X f(m X f x)).
+Example plus_1 : plus zero one = one.
+Proof. reflexivity. Qed.
+Example plus_2 : plus two three = plus three two.
+Proof. reflexivity. Qed.
+Example plus_3 :
+  plus (plus two two) three = plus one (plus three three).
+Proof. reflexivity. Qed.
+
+(*Exercise: 2 stars, advanced (church_mult)
+Multiplication:*)
+Definition mult (n m : cnat) : cnat:=
+  fun (X : Type) (f : X -> X) (x : X) => (n X (m X f) x).
+Example mult_1 : mult one one = one.
+Proof. reflexivity. Qed.
+Example mult_2 : mult zero (plus three three) = zero.
+Proof. reflexivity. Qed.
+Example mult_3 : mult two three = plus three three.
+Proof. reflexivity. Qed.
+
+(*Exercise: 2 stars, advanced (church_exp)
+Exponentiation:
+(Hint: Polymorphism plays a crucial role here. However, choosing the 
+right type to iterate over can be tricky. If you hit a "Universe inconsistency" 
+error, try iterating over a different type. Iterating over cnat itself is 
+usually problematic.)*)
+
+Definition exp (n m : cnat) : cnat:=
+  fun (X : Type) (f : X -> X) (x : X) => (m (X -> X) (n X) f) x.
+Example exp_1 : exp two two = plus two two.
+Proof. reflexivity. Qed.
+Example exp_2 : exp three zero = one.
+Proof. reflexivity. Qed.
+Example exp_3 : exp three two = plus (mult two (mult two two)) one.
+Proof. reflexivity. Qed. ********************)
+
+End Church.
+End Exercises.
